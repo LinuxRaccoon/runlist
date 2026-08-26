@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import ScanScreen from './components/ScanScreen'
 import StopCard from './components/StopCard'
 import { scanImageForPostcodes } from './utils/ocr'
+import { scanImageWithGemini } from './utils/geminiScan'
 import { loadRun, saveRun, clearRun, makeId } from './utils/storage'
 
 const IMAP_URL =
@@ -12,6 +13,7 @@ export default function App() {
   const [scanning, setScanning] = useState(false)
   const [progressLabel, setProgressLabel] = useState('')
   const [progressPct, setProgressPct] = useState(0)
+  const [scanMode, setScanMode] = useState('quick') // 'quick' = Tesseract, 'detailed' = Gemini
   const [toast, setToast] = useState(null)
   const toastTimer = useRef(null)
 
@@ -26,31 +28,49 @@ export default function App() {
     toastTimer.current = setTimeout(() => setToast(null), 2200)
   }
 
-  async function handleFileSelected(file) {
+  async function handleFileSelected(file, mode = scanMode) {
     setScanning(true)
-    setProgressLabel('Starting…')
+    setProgressLabel(mode === 'detailed' ? 'Sending to detailed scan…' : 'Starting…')
     setProgressPct(0)
-    try {
-      const matches = await scanImageForPostcodes(file, (status, pct) => {
-        setProgressLabel(status.replace(/_/g, ' '))
-        setProgressPct(pct)
-      })
 
-      if (matches.length === 0) {
-        showToast('No postcodes found — try a clearer, closer photo')
+    try {
+      let newStops
+
+      if (mode === 'detailed') {
+        const drops = await scanImageWithGemini(file)
+        if (drops.length === 0) {
+          showToast('No drops found — try a clearer photo')
+          return
+        }
+        newStops = drops.map((d) => ({
+          id: makeId(),
+          postcode: (d.postcode || '').toUpperCase(),
+          detail: d.houseNumberOrName || '',
+          status: 'pending',
+        }))
       } else {
-        const newStops = matches.map((m) => ({
+        const matches = await scanImageForPostcodes(file, (status, pct) => {
+          setProgressLabel(status.replace(/_/g, ' '))
+          setProgressPct(pct)
+        })
+        if (matches.length === 0) {
+          showToast('No postcodes found — try a clearer, closer photo')
+          return
+        }
+        newStops = matches.map((m) => ({
           id: makeId(),
           postcode: m.postcode,
           detail: '',
           status: 'pending',
         }))
-        setStops((prev) => [...prev, ...newStops])
-        showToast(`Added ${newStops.length} postcode${newStops.length === 1 ? '' : 's'}`)
       }
+
+      setStops((prev) => [...prev, ...newStops])
+      showToast(`Added ${newStops.length} stop${newStops.length === 1 ? '' : 's'}`)
     } catch (err) {
       console.error(err)
-      showToast('Scan failed — try again')
+      const message = mode === 'detailed' && err.message ? err.message : 'Scan failed — try again'
+      showToast(message)
     } finally {
       setScanning(false)
     }
@@ -78,7 +98,8 @@ export default function App() {
   }
 
   async function copyAndOpenMap(stop) {
-    const address = [stop.detail, stop.postcode].filter(Boolean).join(', ')
+    // e.g. "2 PO20 0TY" or "Sparrows PO10 8SP" — no comma, just space-separated.
+    const address = [stop.detail, stop.postcode].filter(Boolean).join(' ')
     try {
       await navigator.clipboard.writeText(address)
       showToast('Address copied — paste into iMap search')
@@ -119,6 +140,8 @@ export default function App() {
             scanning={scanning}
             progressLabel={progressLabel}
             progressPct={progressPct}
+            mode={scanMode}
+            onModeChange={setScanMode}
           />
         ) : (
           <div className="stop-list">
@@ -160,7 +183,7 @@ export default function App() {
             capture="environment"
             onChange={(e) => {
               const file = e.target.files?.[0]
-              if (file) handleFileSelected(file)
+              if (file) handleFileSelected(file, scanMode)
               e.target.value = ''
             }}
           />

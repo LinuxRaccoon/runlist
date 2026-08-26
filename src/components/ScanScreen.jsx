@@ -1,6 +1,6 @@
 import { useRef } from 'react'
 
-export default function ScanScreen({ onFileSelected, scanning, progressLabel, progressPct }) {
+export default function ScanScreen({ onFileSelected, scanning, progressLabel, progressPct, mode, onModeChange }) {
   const inputRef = useRef(null)
 
   return (
@@ -13,8 +13,36 @@ export default function ScanScreen({ onFileSelected, scanning, progressLabel, pr
               <rect x="8" y="9" width="8" height="6" rx="1" />
             </svg>
           </div>
-          <h1>Scan a postcode list</h1>
-          <p>Point your camera at a screen or printed sheet of postcodes. They'll load in the order they appear.</p>
+          <h1>Scan a drop sheet</h1>
+          <p>
+            {mode === 'quick'
+              ? 'Point your camera at a simple postcode list. They\u2019ll load in the order they appear.'
+              : 'Handles messier sheets \u2014 multiple fields, checkboxes, mixed layouts. Needs an internet connection.'}
+          </p>
+
+          <div className="scan-mode-toggle" role="radiogroup" aria-label="Scan mode">
+            <button
+              type="button"
+              role="radio"
+              aria-checked={mode === 'quick'}
+              className={`scan-mode-btn${mode === 'quick' ? ' active' : ''}`}
+              onClick={() => onModeChange('quick')}
+            >
+              Quick scan
+              <span className="scan-mode-sub">Free &middot; offline</span>
+            </button>
+            <button
+              type="button"
+              role="radio"
+              aria-checked={mode === 'detailed'}
+              className={`scan-mode-btn${mode === 'detailed' ? ' active' : ''}`}
+              onClick={() => onModeChange('detailed')}
+            >
+              Detailed scan
+              <span className="scan-mode-sub">Handles messy sheets</span>
+            </button>
+          </div>
+
           <button className="btn btn-primary" onClick={() => inputRef.current?.click()}>
             Take photo
           </button>
@@ -26,14 +54,14 @@ export default function ScanScreen({ onFileSelected, scanning, progressLabel, pr
             capture="environment"
             onChange={(e) => {
               const file = e.target.files?.[0]
-              if (file) onFileSelected(file)
+              if (file) onFileSelected(file, mode)
               e.target.value = ''
             }}
           />
         </>
       ) : (
         <>
-          <h1>Reading postcodes…</h1>
+          <h1>Reading drop sheet…</h1>
           <div className="scan-progress">
             <div className="scan-progress-track">
               <div className="scan-progress-fill" style={{ width: `${Math.round(progressPct * 100)}%` }} />

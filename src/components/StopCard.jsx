@@ -1,4 +1,4 @@
-export default function StopCard({ stop, index, onChange, onDelivered, onOpenMap, onRemove }) {
+export default function StopCard({ stop, index, onChange, onToggleDelivered, onOpenMap, onRemove }) {
   const delivered = stop.status === 'delivered'
 
   return (
@@ -37,11 +37,10 @@ export default function StopCard({ stop, index, onChange, onDelivered, onOpenMap
           Copy &amp; open iMap
         </button>
         <button
-          className="btn btn-primary"
-          onClick={onDelivered}
-          disabled={delivered}
+          className={delivered ? 'btn btn-secondary' : 'btn btn-primary'}
+          onClick={onToggleDelivered}
         >
-          {delivered ? 'Delivered' : 'Mark delivered'}
+          {delivered ? 'Undo delivered' : 'Mark delivered'}
         </button>
       </div>
     </div>

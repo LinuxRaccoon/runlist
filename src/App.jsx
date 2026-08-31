@@ -84,9 +84,13 @@ export default function App() {
     setStops((prev) => prev.filter((s) => s.id !== id))
   }
 
-  function markDelivered(id) {
+  function toggleDelivered(id) {
     setStops((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, status: 'delivered' } : s))
+      prev.map((s) =>
+        s.id === id
+          ? { ...s, status: s.status === 'delivered' ? 'pending' : 'delivered' }
+          : s
+      )
     )
   }
 
@@ -151,7 +155,7 @@ export default function App() {
                 stop={stop}
                 index={i}
                 onChange={updateStop}
-                onDelivered={() => markDelivered(stop.id)}
+                onToggleDelivered={() => toggleDelivered(stop.id)}
                 onOpenMap={() => copyAndOpenMap(stop)}
                 onRemove={() => removeStop(stop.id)}
               />

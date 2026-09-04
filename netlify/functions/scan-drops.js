@@ -10,6 +10,17 @@
 const MODEL = 'gemini-3.5-flash-lite'
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`
 
+// Google's 503s explicitly say spikes are "usually temporary" — worth a
+// couple of quick retries before giving up, rather than failing on the
+// first hiccup. Kept short so the whole function stays well under
+// Netlify's function time limit.
+const MAX_RETRIES = 2
+const RETRY_DELAY_MS = 1200
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
 const PROMPT = `You are reading a photo of a UK delivery/drop sheet. It may be a simple list of postcodes, or a more complex "Van Loading Check Sheet" style document with multiple drops, each having a customer name, house number or name, street, town, and postcode — often mixed in with unrelated load/unload checkboxes, tote numbers, or product/stock details.
 
 Extract ONLY each drop's house number or house name, and its UK postcode. Ignore customer names, street/town names, load/unload checkboxes, tote counts, product substitutions, and any other content.
@@ -73,19 +84,37 @@ export const handler = async (event) => {
   }
 
   try {
-    const res = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(requestBody),
-    })
+    let res, lastErrText, lastStatus
+
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt += 1) {
+      res = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody),
+      })
+
+      if (res.ok) break
+
+      lastStatus = res.status
+      lastErrText = await res.text()
+      console.error(`Gemini API error (attempt ${attempt + 1}/${MAX_RETRIES + 1}):`, lastStatus, lastErrText)
+
+      // Only retry on transient server-side issues — a bad request or bad
+      // key will never succeed on retry, so fail fast on those instead.
+      const isTransient = lastStatus === 503 || lastStatus === 429
+      if (!isTransient || attempt === MAX_RETRIES) break
+      await sleep(RETRY_DELAY_MS * (attempt + 1))
+    }
 
     if (!res.ok) {
-      const errText = await res.text()
-      console.error('Gemini API error:', res.status, errText)
-      return {
-        statusCode: 502,
-        body: JSON.stringify({ error: `Gemini API returned an error (${res.status}).` }),
-      }
+      const friendlyMessage =
+        lastStatus === 503
+          ? "Google's AI service is temporarily overloaded — try again shortly, or use Quick scan for now."
+          : lastStatus === 429
+          ? 'Too many scans in a short space of time — wait a moment and try again.'
+          : `Gemini API returned an error (${lastStatus}).`
+
+      return { statusCode: 502, body: JSON.stringify({ error: friendlyMessage }) }
     }
 
     const data = await res.json()

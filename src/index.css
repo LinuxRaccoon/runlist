@@ -442,3 +442,14 @@ textarea:focus-visible {
   color: var(--text-faint);
   margin: 4px 2px 10px;
 }
+.scan-source-buttons,
+.footer-scan-buttons {
+  display: flex;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.scan-source-buttons .btn,
+.footer-scan-buttons .btn {
+  flex: 1;
+}

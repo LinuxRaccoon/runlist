@@ -1,7 +1,8 @@
 import { useRef } from 'react'
 
 export default function ScanScreen({ onFileSelected, scanning, progressLabel, progressPct, mode, onModeChange }) {
-  const inputRef = useRef(null)
+  const cameraInputRef = useRef(null)
+  const libraryInputRef = useRef(null)
 
   return (
     <div className="scan-screen">
@@ -16,8 +17,8 @@ export default function ScanScreen({ onFileSelected, scanning, progressLabel, pr
           <h1>Scan a drop sheet</h1>
           <p>
             {mode === 'quick'
-              ? 'Point your camera at a simple postcode list. They\u2019ll load in the order they appear.'
-              : 'Handles messier sheets \u2014 multiple fields, checkboxes, mixed layouts. Needs an internet connection.'}
+              ? 'Point your camera at a simple postcode list. They’ll load in the order they appear.'
+              : 'Handles messier sheets — multiple fields, checkboxes, mixed layouts. Needs an internet connection.'}
           </p>
 
           <div className="scan-mode-toggle" role="radiogroup" aria-label="Scan mode">
@@ -43,15 +44,31 @@ export default function ScanScreen({ onFileSelected, scanning, progressLabel, pr
             </button>
           </div>
 
-          <button className="btn btn-primary" onClick={() => inputRef.current?.click()}>
-            Take photo
-          </button>
+          <div className="scan-source-buttons">
+            <button className="btn btn-primary" onClick={() => cameraInputRef.current?.click()}>
+              Take photo
+            </button>
+            <button className="btn btn-secondary" onClick={() => libraryInputRef.current?.click()}>
+              Choose from gallery
+            </button>
+          </div>
           <input
-            ref={inputRef}
+            ref={cameraInputRef}
             className="file-input"
             type="file"
             accept="image/*"
             capture="environment"
+            onChange={(e) => {
+              const file = e.target.files?.[0]
+              if (file) onFileSelected(file, mode)
+              e.target.value = ''
+            }}
+          />
+          <input
+            ref={libraryInputRef}
+            className="file-input"
+            type="file"
+            accept="image/*"
             onChange={(e) => {
               const file = e.target.files?.[0]
               if (file) onFileSelected(file, mode)

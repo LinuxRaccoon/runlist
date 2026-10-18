@@ -169,22 +169,42 @@ export default function App() {
 
       {stops.length > 0 && (
         <div className="footer-bar">
-          <button
-            className="btn btn-secondary btn-block"
-            onClick={() => document.getElementById('rescan-input')?.click()}
-            disabled={scanning}
-          >
-            Scan more
-          </button>
+          <div className="footer-scan-buttons">
+            <button
+              className="btn btn-secondary btn-block"
+              onClick={() => document.getElementById('rescan-camera-input')?.click()}
+              disabled={scanning}
+            >
+              Scan more
+            </button>
+            <button
+              className="btn btn-secondary btn-block"
+              onClick={() => document.getElementById('rescan-library-input')?.click()}
+              disabled={scanning}
+            >
+              Add from gallery
+            </button>
+          </div>
           <button className="btn btn-danger btn-block" onClick={handleClearRun}>
             Clear run
           </button>
           <input
-            id="rescan-input"
+            id="rescan-camera-input"
             className="file-input"
             type="file"
             accept="image/*"
             capture="environment"
+            onChange={(e) => {
+              const file = e.target.files?.[0]
+              if (file) handleFileSelected(file, scanMode)
+              e.target.value = ''
+            }}
+          />
+          <input
+            id="rescan-library-input"
+            className="file-input"
+            type="file"
+            accept="image/*"
             onChange={(e) => {
               const file = e.target.files?.[0]
               if (file) handleFileSelected(file, scanMode)

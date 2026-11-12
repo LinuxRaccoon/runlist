@@ -116,13 +116,21 @@ export async function scanPdfForDrops(file) {
     }
     if (BOILERPLATE_RE.test(fullRowText)) continue
 
-    const dropLabelItem = row.items.find((it) => it.str === 'Drop' && it.x < DROP_LABEL_MAX_X)
+    // Older pdf.js versions emit "Drop" and "1" as separate text items, newer ones
+    // emit "Drop 1" as one — accept either.
+    const dropLabelItem = row.items.find(
+      (it) => it.x < DROP_LABEL_MAX_X && /^Drop\b/.test(it.str.trim())
+    )
     if (dropLabelItem) {
       flush()
-      const numberItem = row.items.find((it) => it.x > dropLabelItem.x && it.x < DROP_NUMBER_MAX_X)
+      let dropNumber = (dropLabelItem.str.match(/\d+/) || [''])[0]
+      if (!dropNumber) {
+        const numberItem = row.items.find((it) => it.x > dropLabelItem.x && it.x < DROP_NUMBER_MAX_X)
+        dropNumber = numberItem ? numberItem.str.trim() : ''
+      }
       const name = columnText(row.items, ADDRESS_COL_MIN_X, ADDRESS_COL_MAX_X).trim()
       current = {
-        dropNumber: numberItem ? numberItem.str.trim() : '',
+        dropNumber,
         name,
         addressLines: [],
       }

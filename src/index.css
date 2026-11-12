@@ -483,3 +483,23 @@ textarea:focus-visible {
   text-align: center;
   margin-top: 0.25rem;
 }
+
+/* Footer fix: scan buttons on one row, Clear run on its own row below */
+.footer-bar {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.footer-scan-buttons {
+  display: flex;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.footer-scan-buttons .btn {
+  flex: 1 1 0;
+  min-width: 0;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+  font-size: 0.85rem;
+}

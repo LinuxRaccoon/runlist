@@ -3,6 +3,7 @@ import ScanScreen from './components/ScanScreen'
 import StopCard from './components/StopCard'
 import { scanImageForPostcodes } from './utils/ocr'
 import { scanImageWithGemini } from './utils/geminiScan'
+import { scanPdfForDrops } from './utils/pdfScan'
 import { loadRun, saveRun, clearRun, makeId } from './utils/storage'
 
 const IMAP_URL =
@@ -76,6 +77,33 @@ export default function App() {
     }
   }
 
+  async function handlePdfSelected(file) {
+    setScanning(true)
+    setProgressLabel('Reading delivery sheet…')
+    setProgressPct(0)
+
+    try {
+      const drops = await scanPdfForDrops(file)
+      if (drops.length === 0) {
+        showToast("Couldn't find any addresses in that PDF")
+        return
+      }
+      const newStops = drops.map((d) => ({
+        id: makeId(),
+        postcode: d.postcode,
+        detail: d.detail,
+        status: 'pending',
+      }))
+      setStops((prev) => [...prev, ...newStops])
+      showToast(`Added ${newStops.length} stop${newStops.length === 1 ? '' : 's'}`)
+    } catch (err) {
+      console.error(err)
+      showToast('Could not read that PDF — try again')
+    } finally {
+      setScanning(false)
+    }
+  }
+
   function updateStop(updated) {
     setStops((prev) => prev.map((s) => (s.id === updated.id ? updated : s)))
   }
@@ -141,6 +169,7 @@ export default function App() {
         {stops.length === 0 ? (
           <ScanScreen
             onFileSelected={handleFileSelected}
+            onPdfSelected={handlePdfSelected}
             scanning={scanning}
             progressLabel={progressLabel}
             progressPct={progressPct}
@@ -184,6 +213,13 @@ export default function App() {
             >
               Add from gallery
             </button>
+            <button
+              className="btn btn-secondary btn-block"
+              onClick={() => document.getElementById('rescan-pdf-input')?.click()}
+              disabled={scanning}
+            >
+              Add from PDF
+            </button>
           </div>
           <button className="btn btn-danger btn-block" onClick={handleClearRun}>
             Clear run
@@ -208,6 +244,17 @@ export default function App() {
             onChange={(e) => {
               const file = e.target.files?.[0]
               if (file) handleFileSelected(file, scanMode)
+              e.target.value = ''
+            }}
+          />
+          <input
+            id="rescan-pdf-input"
+            className="file-input"
+            type="file"
+            accept="application/pdf"
+            onChange={(e) => {
+              const file = e.target.files?.[0]
+              if (file) handlePdfSelected(file)
               e.target.value = ''
             }}
           />

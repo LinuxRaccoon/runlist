@@ -1,8 +1,9 @@
 import { useRef } from 'react'
 
-export default function ScanScreen({ onFileSelected, scanning, progressLabel, progressPct, mode, onModeChange }) {
+export default function ScanScreen({ onFileSelected, onPdfSelected, scanning, progressLabel, progressPct, mode, onModeChange }) {
   const cameraInputRef = useRef(null)
   const libraryInputRef = useRef(null)
+  const pdfInputRef = useRef(null)
 
   return (
     <div className="scan-screen">
@@ -72,6 +73,28 @@ export default function ScanScreen({ onFileSelected, scanning, progressLabel, pr
             onChange={(e) => {
               const file = e.target.files?.[0]
               if (file) onFileSelected(file, mode)
+              e.target.value = ''
+            }}
+          />
+
+          <div className="scan-divider">
+            <span>or</span>
+          </div>
+
+          <button className="btn btn-secondary" onClick={() => pdfInputRef.current?.click()}>
+            Upload delivery sheet (PDF)
+          </button>
+          <p className="scan-pdf-hint">
+            For a downloaded route list &mdash; addresses are read straight from the file, no photo needed.
+          </p>
+          <input
+            ref={pdfInputRef}
+            className="file-input"
+            type="file"
+            accept="application/pdf"
+            onChange={(e) => {
+              const file = e.target.files?.[0]
+              if (file) onPdfSelected(file)
               e.target.value = ''
             }}
           />

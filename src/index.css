@@ -453,3 +453,33 @@ textarea:focus-visible {
 .footer-scan-buttons .btn {
   flex: 1;
 }
+.scan-divider {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  margin: 0.5rem 0;
+  color: var(--muted, #888);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.scan-divider::before,
+.scan-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.25;
+}
+
+.scan-divider span {
+  padding: 0 0.75rem;
+}
+
+.scan-pdf-hint {
+  font-size: 0.85rem;
+  opacity: 0.7;
+  text-align: center;
+  margin-top: 0.25rem;
+}

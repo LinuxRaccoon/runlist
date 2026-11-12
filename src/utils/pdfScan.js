@@ -89,12 +89,10 @@ export async function scanPdfForDrops(file) {
     let detail = addressText
     if (match) {
       postcode = `${match[1]} ${match[2]}`.toUpperCase()
-      detail = (addressText.slice(0, match.index) + addressText.slice(match.index + match[0].length)).trim()
-      detail = detail
-        .replace(/,\s*$/, '')
-        .replace(/^,\s*/, '')
-        .replace(/,(?=\S)/g, ', ')
-        .trim()
+      // iMap only needs the house number/name + postcode — adding the road, town
+      // or county makes the search fail. The first comma-separated chunk of the
+      // address is the house number/name ("2", "Selworthy House", "34a").
+      detail = addressText.slice(0, match.index).split(',')[0].trim()
     }
     if (postcode) {
       drops.push({

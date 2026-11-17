@@ -16,6 +16,8 @@ export default function App() {
   const [progressPct, setProgressPct] = useState(0)
   const [scanMode, setScanMode] = useState('quick') // 'quick' = Tesseract, 'detailed' = Gemini
   const [toast, setToast] = useState(null)
+  // Set after a PDF import: { name, handle } — handle is null if the browser can't offer deletion.
+  const [pdfNotice, setPdfNotice] = useState(null)
   const toastTimer = useRef(null)
 
   // Persist on every change so a backgrounded/reloaded tab doesn't lose the run.
@@ -77,7 +79,7 @@ export default function App() {
     }
   }
 
-  async function handlePdfSelected(file) {
+  async function handlePdfSelected(file, handle = null) {
     setScanning(true)
     setProgressLabel('Reading delivery sheet…')
     setProgressPct(0)
@@ -95,12 +97,54 @@ export default function App() {
         status: 'pending',
       }))
       setStops((prev) => [...prev, ...newStops])
+      setPdfNotice({ name: file.name, handle })
       showToast(`Added ${newStops.length} stop${newStops.length === 1 ? '' : 's'}`)
     } catch (err) {
       console.error(err)
       showToast('Could not read that PDF — try again')
     } finally {
       setScanning(false)
+    }
+  }
+
+  // Try the newer file picker (Chrome/Edge) so we keep a handle that lets us delete
+  // the PDF afterwards. If it isn't available, fall back to the ordinary file input.
+  async function pickPdf(fallbackClick) {
+    if (typeof window.showOpenFilePicker !== 'function') {
+      fallbackClick()
+      return
+    }
+    try {
+      const [handle] = await window.showOpenFilePicker({
+        multiple: false,
+        types: [{ description: 'PDF', accept: { 'application/pdf': ['.pdf'] } }],
+      })
+      const file = await handle.getFile()
+      await handlePdfSelected(file, handle)
+    } catch (err) {
+      if (err?.name === 'AbortError') return // user cancelled the picker
+      console.error(err)
+      fallbackClick()
+    }
+  }
+
+  async function deletePickedPdf() {
+    const handle = pdfNotice?.handle
+    if (!handle) return
+    try {
+      if (typeof handle.remove !== 'function') throw new Error('remove() not supported')
+      const perm = await handle.requestPermission({ mode: 'readwrite' })
+      if (perm !== 'granted') {
+        showToast('Permission not given — PDF not deleted')
+        return
+      }
+      await handle.remove()
+      setPdfNotice(null)
+      showToast('PDF deleted from your phone')
+    } catch (err) {
+      console.error(err)
+      setPdfNotice({ ...pdfNotice, handle: null })
+      showToast("Couldn't delete it here — please delete it from Downloads")
     }
   }
 
@@ -146,6 +190,7 @@ export default function App() {
     const ok = window.confirm('Clear all stops? This can\'t be undone.')
     if (!ok) return
     setStops([])
+    setPdfNotice(null)
     clearRun()
     showToast('Run cleared')
   }
@@ -170,6 +215,7 @@ export default function App() {
           <ScanScreen
             onFileSelected={handleFileSelected}
             onPdfSelected={handlePdfSelected}
+            onPickPdf={pickPdf}
             scanning={scanning}
             progressLabel={progressLabel}
             progressPct={progressPct}
@@ -178,6 +224,25 @@ export default function App() {
           />
         ) : (
           <div className="stop-list">
+            {pdfNotice && (
+              <div className="pdf-notice" role="status">
+                <p>
+                  {pdfNotice.handle
+                    ? `Imported from ${pdfNotice.name}. Delete the downloaded PDF so full addresses aren\u2019t kept on this phone.`
+                    : 'Imported. Remember to delete the downloaded PDF from your Downloads so full addresses aren\u2019t kept on this phone.'}
+                </p>
+                <div className="pdf-notice-actions">
+                  {pdfNotice.handle && (
+                    <button className="btn btn-danger" onClick={deletePickedPdf}>
+                      Delete PDF
+                    </button>
+                  )}
+                  <button className="btn btn-secondary" onClick={() => setPdfNotice(null)}>
+                    Dismiss
+                  </button>
+                </div>
+              </div>
+            )}
             {stops.map((stop, i) => (
               <StopCard
                 key={stop.id}
@@ -215,7 +280,7 @@ export default function App() {
             </button>
             <button
               className="btn btn-secondary btn-block"
-              onClick={() => document.getElementById('rescan-pdf-input')?.click()}
+              onClick={() => pickPdf(() => document.getElementById('rescan-pdf-input')?.click())}
               disabled={scanning}
             >
               Add from PDF

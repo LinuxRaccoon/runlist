@@ -1,6 +1,6 @@
 import { useRef } from 'react'
 
-export default function ScanScreen({ onFileSelected, onPdfSelected, scanning, progressLabel, progressPct, mode, onModeChange }) {
+export default function ScanScreen({ onFileSelected, onPdfSelected, onPickPdf, scanning, progressLabel, progressPct, mode, onModeChange }) {
   const cameraInputRef = useRef(null)
   const libraryInputRef = useRef(null)
   const pdfInputRef = useRef(null)
@@ -81,7 +81,10 @@ export default function ScanScreen({ onFileSelected, onPdfSelected, scanning, pr
             <span>or</span>
           </div>
 
-          <button className="btn btn-secondary" onClick={() => pdfInputRef.current?.click()}>
+          <button
+            className="btn btn-secondary"
+            onClick={() => onPickPdf(() => pdfInputRef.current?.click())}
+          >
             Upload delivery sheet (PDF)
           </button>
           <p className="scan-pdf-hint">

@@ -503,3 +503,26 @@ textarea:focus-visible {
   padding-right: 0.5rem;
   font-size: 0.85rem;
 }
+
+.pdf-notice {
+  border: 1px solid var(--amber, #ffc300);
+  border-radius: 12px;
+  padding: 0.9rem 1rem;
+  margin-bottom: 0.75rem;
+  background: rgba(255, 195, 0, 0.08);
+}
+
+.pdf-notice p {
+  margin: 0 0 0.75rem;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.pdf-notice-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.pdf-notice-actions .btn {
+  flex: 1;
+}
